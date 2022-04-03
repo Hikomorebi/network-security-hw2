@@ -1,66 +1,75 @@
 #ifndef CRSAOPERATE_H
 #define CRSAOPERATE_H
 #include <stdio.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <cstring>
 #include <cassert>
-typedef UINT64 unsigned __int64
+typedef unsigned long long ULONG64;
 
-class PublicKey
-{
-public:
-    unsigned __int64 nE;
-    unsigned __int64 nN;
-};
-class Paraments
-{
-public:
-    unsigned __int64 d;
-    unsigned __int64 n;
-    unsigned __int64 e;
-};
-class RsaParam
-{
-public:
-    unsigned __int64 p;
-    unsigned __int64 q;
-    unsigned __int64 n;
-    unsigned __int64 f;
-    unsigned __int64 e;
-    unsigned __int64 d;
-    unsigned __int64 s;
-};
-//计算两个数的乘积然后取模
-unsigned __int64 MulMod(unsigned __int64 a, unsigned __int64 b, unsigned __int64 n);
 
-//计算某数的若干次幂，然后对结果进行取模运算
-unsigned __int64 PowMod(unsigned __int64 base, unsigned __int64 pow, unsigned __int64 n);
+typedef struct PublicKeys
+{
+    ULONG64 nE;
+    ULONG64 nN;
+} PublicKey;
+typedef struct Paraments
+{
+    ULONG64 d;
+    ULONG64 n;
+    ULONG64 e;
+} Parament;
+typedef struct RsaParams
+{
+    ULONG64 p;
+    ULONG64 q;
+    ULONG64 n;
+    ULONG64 f;
+    ULONG64 e;
+    ULONG64 d;
+    ULONG64 s;
+} RsaParam;
+//模乘运算,计算两个数的乘积然后取模
+ULONG64 MulMod(ULONG64 a, ULONG64 b, ULONG64 n);
+
+//模幂运算,计算某数的若干次幂，然后对结果进行取模运算
+ULONG64 PowMod(ULONG64 base, ULONG64 pow, ULONG64 n);
 
 //生成随机大质数
-long RabinMillerKnl(unsigned __int64 &n);
+long RabinMillerKnl(ULONG64 &n);
 
-//多次运行RabinMillerKnl函数，减少误判概率
-long RabinMiller(unsigned __int64 &n, long loop = 100);
+//多次运行Rabin-Miller的检验函数，减少误判概率
+long RabinMiller(ULONG64 &n, long loop);
 
 //最终生成质数
-unsigned __int64 RandomPrime(char bits);
+ULONG64 RandomPrime(char bits);
 
 //求最大公约数
-unsigned __int64 Gcd(unsigned __int64 &p, unsigned __int64 &q);
+ULONG64 Gcd(ULONG64 &p, ULONG64 &q);
 
 //私钥生成
-unsigned __int64 Euclid(unsigned __int64 e, unsigned __int64 t_n);
+ULONG64 Euclid(ULONG64 e, ULONG64 t_n);
 
 RsaParam RsaGetParam(void);
 
+//产生随机的DES密钥
+void GenerateDesKey(char* randomKey);
+
 class CRSASection
 {
+private:
+    Parament m_cParament;
+
 public:
-    static UINT64 Encry(unsigned short nSorce, PublicKey &cKey)
+    //构造函数
+    CRSASection();
+    //加密函数，使用公钥，通过模幂运算实现计算C = (M ^ e) mod n 的加密过程
+    static ULONG64 Encry(unsigned short nSorce, PublicKey &cKey)
     {
         return PowMod(nSorce, cKey.nE, cKey.nN);
     }
-    unsigned short Decry(UINT64 nSorce);
+    //解密函数，实现M = (C ^ d) mod n的计算
+    unsigned short Decry(ULONG64 nSorce);
+    //公钥获取函数
     PublicKey GetPublicKey();
 };
 

@@ -14,13 +14,17 @@
 #include <memory.h>
 #include <sys/ioctl.h>
 #include "CDesOperate.h"
+#include "CRsaOperate.h"
 using namespace std;
 #define SERVERPORT 12345
 #define BUFFERSIZE 64
+#define DESKEYLENGTH 8
 char strStdinBuffer[BUFFERSIZE];
 char strSocketBuffer[BUFFERSIZE];
 char strEncryBuffer[BUFFERSIZE];
 char strDecryBuffer[BUFFERSIZE];
+char strDesKey[DESKEYLENGTH];
+PublicKey cRsaPublicKey;
 ssize_t totalRecv(int s, void *buf, size_t len, int flags)
 {
     size_t nCurSize = 0;
@@ -130,7 +134,36 @@ int main(int argc, char *[])
         }
         else
         {
-            printf("Connect Success!  \nBegin to chat...\n");
+            printf("Connect Success! \n");
+            GenerateDesKey(strDesKey);
+            printf("Create DES key success\n");
+            if (sizeof(cRsaPublicKey) == totalRecv(nConnectSocket, (char *)&cRsaPublicKey, sizeof(cRsaPublicKey), 0))
+            {
+                printf("Successful get the RSA public Key\n");
+            }
+            else
+            {
+                perror("Get RSA public key ");
+                exit(0);
+            }
+            ULONG64 nEncryptDesKey[DESKEYLENGTH / 2];
+            unsigned short *pDesKey = (unsigned short *)strDesKey;
+            for (int i = 0; i < DESKEYLENGTH / 2; i++)
+            {
+                nEncryptDesKey[i] = CRSASection::Encry(pDesKey[i], cRsaPublicKey);
+            }
+            if (sizeof(ULONG64) * DESKEYLENGTH / 2 != send(nConnectSocket, (char *)nEncryptDesKey,
+                                                          sizeof(ULONG64) * DESKEYLENGTH / 2, 0))
+            {
+                perror("Send DES key Error");
+                exit(0);
+            }
+            else
+            {
+                printf("Successful send the encrypted DES Key\n");
+            }
+            printf("Begin to chat...\n");
+
             SecretChat(nConnectSocket, strIpAddr, "abcdefgh");
         }
         close(nConnectSocket);
@@ -172,6 +205,37 @@ int main(int argc, char *[])
         {
             close(nListenSocket);
             printf("server: got connection from %s, port %d, socket %d\n", inet_ntoa(sRemoteAddr.sin_addr), ntohs(sRemoteAddr.sin_port), nAcceptSocket);
+            CRSASection cRsaSection;
+            cRsaPublicKey = cRsaSection.GetPublicKey();
+            if (send(nAcceptSocket,
+                     (char *)(&cRsaPublicKey),
+                     sizeof(cRsaPublicKey), 0) != sizeof(cRsaPublicKey))
+            {
+                perror("send");
+                exit(0);
+            }
+            else
+            {
+                printf("successful send the RSA public key. \n");
+            }
+            ULONG64 nEncryptDesKey[DESKEYLENGTH / 2];
+            if (DESKEYLENGTH / 2 * sizeof(ULONG64) != totalRecv(nAcceptSocket,
+                                                               (char *)nEncryptDesKey, DESKEYLENGTH / 2 * sizeof(ULONG64), 0))
+            {
+                perror("totalRecv DES key error");
+                exit(0);
+            }
+            else
+            {
+                printf("successful get the DES key. \n");
+                unsigned short *pDesKey = (unsigned short *)strDesKey;
+                for (int i = 0; i < DESKEYLENGTH / 2; i++)
+                {
+                    pDesKey[i] = cRsaSection.Decry(nEncryptDesKey[i]);
+                }
+            }
+            printf("Begin to chat...\n");
+
             SecretChat(nAcceptSocket, inet_ntoa(sRemoteAddr.sin_addr), "abcdefgh");
             close(nAcceptSocket);
         }

@@ -1,13 +1,15 @@
 #include "CRSAOperate.h"
+#include <stdlib.h>
+#include <time.h>
 
-unsigned __int64 MulMod(unsigned __int64 a, unsigned __int64 b, unsigned __int64 n)
+ULONG64 MulMod(ULONG64 a, ULONG64 b, ULONG64 n)
 {
     return (a % n) * (b % n) % n;
 }
 
-unsigned __int64 PowMod(unsigned __int64 base, unsigned __int64 pow, unsigned __int64 n)
+ULONG64 PowMod(ULONG64 base, ULONG64 pow, ULONG64 n)
 {
-    unsigned __int64 a = base, b = pow, c = 1;
+    ULONG64 a = base, b = pow, c = 1;
     while (b)
     {
         while (!(b & 1))
@@ -21,9 +23,9 @@ unsigned __int64 PowMod(unsigned __int64 base, unsigned __int64 pow, unsigned __
     return c;
 }
 
-long RabinMillerKnl(unsigned __int64 &n)
+long RabinMillerKnl(ULONG64 &n)
 {
-    unsigned __int64 a, q, k, v;
+    ULONG64 a, q, k, v;
     q = n - 1;
     k = 0;
     while (!(q & 1))
@@ -31,7 +33,7 @@ long RabinMillerKnl(unsigned __int64 &n)
         ++k;
         q >>= 1;
     }
-    a = 2 + cRadom.Random(n - 3);
+    a = 2 + rand() % (n - 3);
     v = PowMod(a, q, n);
     if (v == 1)
     {
@@ -50,7 +52,7 @@ long RabinMillerKnl(unsigned __int64 &n)
     return 0;
 }
 
-long RabinMiller(unsigned __int64 &n, long loop = 100)
+long RabinMiller(ULONG64 &n, long loop = 100)
 {
     for (long i = 0; i < loop; i++)
     {
@@ -61,23 +63,23 @@ long RabinMiller(unsigned __int64 &n, long loop = 100)
     }
     return 1;
 }
-unsigned __int64 RandomPrime(char bits)
+ULONG64 RandomPrime(char bits)
 {
-    unsigned __int64 base;
+    ULONG64 base;
     do
     {
         base = (unsigned long)1 << (bits - 1); //保证最高位是 1
-        base += cRadom.Random(base);           //再加上一个随机数
+        base += rand() % base;                 //再加上一个随机数
         base |= 1;                             //保证最低位是 1,即保证是奇数
     } while (!RabinMiller(base, 30));          //进行拉宾－米勒测试 30 次
     return base;                               //全部通过认为是质数
 }
 
-unsigned __int64 Gcd(unsigned __int64 &p, unsigned __int64 &q)
+ULONG64 Gcd(ULONG64 &p, ULONG64 &q)
 {
-    unsigned __int64 a = p > q ? p : q;
-    unsigned __int64 b = p < q ? p : q;
-    unsigned __int64 t;
+    ULONG64 a = p > q ? p : q;
+    ULONG64 b = p < q ? p : q;
+    ULONG64 t;
     if (p == q)
     {
         return p; //两数相等,最大公约数就是本身
@@ -95,10 +97,10 @@ unsigned __int64 Gcd(unsigned __int64 &p, unsigned __int64 &q)
     }
 }
 
-unsigned __int64 Euclid(unsigned __int64 e, unsigned __int64 t_n)
+ULONG64 Euclid(ULONG64 e, ULONG64 t_n)
 {
-    unsigned __int64 Max = 0xffffffffffffffff - t_n;
-    unsigned __int64 i = 1;
+    ULONG64 Max = 0xffffffffffffffff - t_n;
+    ULONG64 i = 1;
     while (1)
     {
         if (((i * t_n) + 1) % e == 0)
@@ -106,7 +108,7 @@ unsigned __int64 Euclid(unsigned __int64 e, unsigned __int64 t_n)
             return ((i * t_n) + 1) / e;
         }
         i++;
-        unsigned __int64 Tmp = (i + 1) * t_n;
+        ULONG64 Tmp = (i + 1) * t_n;
         if (Tmp > Max)
         {
             return 0;
@@ -114,17 +116,17 @@ unsigned __int64 Euclid(unsigned __int64 e, unsigned __int64 t_n)
     }
     return 0;
 }
-RsaParam RsaGetParam(void)
+RsaParam RsaGetParam()
 {
     RsaParam Rsa = {0};
-    UINT64 t;
+    ULONG64 t;
     Rsa.p = RandomPrime(16); //随机生成两个素数
     Rsa.q = RandomPrime(16);
     Rsa.n = Rsa.p * Rsa.q;
     Rsa.f = (Rsa.p - 1) * (Rsa.q - 1);
     do
     {
-        Rsa.e = m_cRadom.Random(65536);
+        Rsa.e = rand() % 65535;
         Rsa.e |= 1;
     } while (Gcd(Rsa.e, Rsa.f) != 1);
     Rsa.d = Euclid(Rsa.e, Rsa.f);
@@ -138,9 +140,9 @@ RsaParam RsaGetParam(void)
     return Rsa;
 }
 
-unsigned short CRSASection::Decry(UINT64 nSorce)
+unsigned short CRSASection::Decry(ULONG64 nSorce)
 {
-    UINT64 nRes = PowMod(nSorce, m_cParament.d, m_cParament.n);
+    ULONG64 nRes = PowMod(nSorce, m_cParament.d, m_cParament.n);
     unsigned short *pRes = (unsigned short *)&(nRes);
     if (pRes[1] != 0 || pRes[3] != 0 || pRes[2] != 0)
     { // error
@@ -157,4 +159,19 @@ PublicKey CRSASection::GetPublicKey()
     cTmp.nE = this->m_cParament.e;
     cTmp.nN = this->m_cParament.n;
     return cTmp;
+}
+
+void GenerateDesKey(char *randomKey)
+{
+    srand((unsigned)time(NULL));
+    for (int i = 0; i < 8; i++)
+    {
+        randomKey[i] = rand() % 93 + 33;
+    }
+    return;
+}
+
+CRSASection::CRSASection()
+{
+    RsaGetParam();
 }
