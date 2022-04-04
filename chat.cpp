@@ -43,16 +43,29 @@ ssize_t totalRecv(int s, void *buf, size_t len, int flags)
 void SecretChat(int nSock, char *pRemoteName, char *pKey)
 {
     CDesOperate cDes;
-    if (strlen(pKey) != 8)
+    fd_set cHandleSet;
+    struct timeval tv;
+    int nRet;
+
+    while (1)
     {
-        printf("Key length error");
-        return;
-    }
-    pid_t nPid;
-    nPid = fork();
-    if (nPid != 0) //子线程用于接受信息
-    {
-        while (1)
+        FD_ZERO(&cHandleSet);
+        FD_SET(nSock, &cHandleSet);
+        FD_SET(0, &cHandleSet);
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+        nRet = select(nSock > 0 ? nSock + 1 : 1, &cHandleSet, NULL, NULL, &tv);
+
+        if (nRet < 0)
+        {
+            printf("Select ERROR!\n");
+            break;
+        }
+        if (0 == nRet)
+        {
+            continue;
+        }
+        if (FD_ISSET(nSock, &cHandleSet))
         {
             bzero(&strSocketBuffer, BUFFERSIZE);
             int nLength = 0;
@@ -68,7 +81,8 @@ void SecretChat(int nSock, char *pRemoteName, char *pKey)
                 strDecryBuffer[BUFFERSIZE - 1] = 0;
                 if (strDecryBuffer[0] != 0 && strDecryBuffer[0] != '\n')
                 {
-                    printf("Receive message from <%s>: %s", pRemoteName, strDecryBuffer);
+                    printf("Receive message form <%s>: %s\n",
+                           pRemoteName, strDecryBuffer);
                     if (0 == memcmp("quit", strDecryBuffer, 4))
                     {
                         printf("Quit!\n");
@@ -77,12 +91,9 @@ void SecretChat(int nSock, char *pRemoteName, char *pKey)
                 }
             }
         }
-    }
-    else
-    {
-        while (1)
+        if (FD_ISSET(0, &cHandleSet))
         {
-            memset(&strStdinBuffer, 0, BUFFERSIZE);
+            bzero(&strStdinBuffer, BUFFERSIZE);
             while (strStdinBuffer[0] == 0)
             {
                 if (fgets(strStdinBuffer, BUFFERSIZE, stdin) == NULL)
@@ -92,7 +103,6 @@ void SecretChat(int nSock, char *pRemoteName, char *pKey)
             }
             int nLen = BUFFERSIZE;
             cDes.Encry(strStdinBuffer, BUFFERSIZE, strEncryBuffer, nLen, pKey, 8);
-
             if (send(nSock, strEncryBuffer, BUFFERSIZE, 0) != BUFFERSIZE)
             {
                 perror("send");
