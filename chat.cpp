@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <memory.h>
 #include <sys/ioctl.h>
+#include <aio.h>
 #include "CDesOperate.h"
 #include "CRsaOperate.h"
 using namespace std;
@@ -81,8 +82,7 @@ void SecretChat(int nSock, char *pRemoteName, char *pKey)
                 strDecryBuffer[BUFFERSIZE - 1] = 0;
                 if (strDecryBuffer[0] != 0 && strDecryBuffer[0] != '\n')
                 {
-                    printf("Receive message form <%s>: %s\n",
-                           pRemoteName, strDecryBuffer);
+                    printf("Receive message form <%s>: %s", pRemoteName, strDecryBuffer);
                     if (0 == memcmp("quit", strDecryBuffer, 4))
                     {
                         printf("Quit!\n");
