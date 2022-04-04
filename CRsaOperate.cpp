@@ -173,5 +173,9 @@ void GenerateDesKey(char *randomKey)
 
 CRSASection::CRSASection()
 {
-    RsaGetParam();
+    RsaParam rp = RsaGetParam();
+    m_cParament.d = rp.d;
+    m_cParament.e = rp.e;
+    m_cParament.n = rp.n;
+    
 }
